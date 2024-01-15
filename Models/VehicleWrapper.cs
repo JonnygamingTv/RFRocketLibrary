@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using Rocket.Unturned.Player;
@@ -24,6 +24,7 @@ namespace RFRocketLibrary.Models
         public List<byte[]> Turrets { get; set; } = new();
         public ItemsWrapper TrunkItems { get; set; } = new();
         public List<BarricadeWrapper> Barricades { get; set; } = new();
+        public List<StructureWrapper> Structures { get; set; } = new();
         public Vector3Wrapper Position { get; set; }
         public QuartenionWrapper Rotation { get; set; }
         // public QuaternionWrapper Rotation { get; set; }
@@ -93,6 +94,13 @@ namespace RFRocketLibrary.Models
                      select BarricadeWrapper.Create(barricadeDrop))
             {
                 result.Barricades.Add(barricade);
+            }
+            if (!StructureManager.tryGetRegion(vehicle.transform, out _, out _, out var reg)) return result;
+            foreach (var structure in from structureDrop in reg.drops
+                                      where !structureDrop.GetServersideData().structure.isDead
+                                      select StructureWrapper.Create(structureDrop))
+            {
+                result.Structures.Add(structure);
             }
 
             return result;
