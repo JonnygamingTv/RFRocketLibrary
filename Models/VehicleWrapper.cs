@@ -4,6 +4,9 @@ using System.Linq;
 using Rocket.Unturned.Player;
 using SDG.Unturned;
 using Steamworks;
+using UnityEngine;
+
+#nullable disable
 
 namespace RFRocketLibrary.Models
 {
@@ -27,7 +30,8 @@ namespace RFRocketLibrary.Models
         public List<StructureWrapper> Structures { get; set; } = new();
         public Vector3Wrapper Position { get; set; }
         public QuartenionWrapper Rotation { get; set; }
-        public UnityEngine.Color32 PaintColor { get; set; }
+        public byte[] PaintColor_ { get; set; } = new byte[4] { 0,0,0,0 };
+        //public Color PaintColor { get; set; } = new Color(0, 0, 0, 1);
         // public QuaternionWrapper Rotation { get; set; }
 
         public VehicleWrapper()
@@ -37,7 +41,7 @@ namespace RFRocketLibrary.Models
         public VehicleWrapper(ushort id, uint instanceId, ushort skinId, ushort mythicId, float roadPosition,
             ushort health, ushort fuel, ushort batteryCharge, ulong owner, ulong @group, bool[] tires,
             List<byte[]> turrets, ItemsWrapper trunkItems, List<BarricadeWrapper> barricades, Vector3Wrapper position,
-            QuartenionWrapper rotation, UnityEngine.Color32 paintcolor = default(UnityEngine.Color32))
+            QuartenionWrapper rotation)
         {
             Id = id;
             InstanceId = instanceId;
@@ -55,7 +59,29 @@ namespace RFRocketLibrary.Models
             Barricades = barricades;
             Position = position;
             Rotation = rotation;
-            PaintColor = paintcolor;
+        }
+        public VehicleWrapper(ushort id, uint instanceId, ushort skinId, ushort mythicId, float roadPosition,
+    ushort health, ushort fuel, ushort batteryCharge, ulong owner, ulong @group, bool[] tires,
+    List<byte[]> turrets, ItemsWrapper trunkItems, List<BarricadeWrapper> barricades, Vector3Wrapper position,
+    QuartenionWrapper rotation, byte[] paintcolor)
+        {
+            Id = id;
+            InstanceId = instanceId;
+            SkinId = skinId;
+            MythicId = mythicId;
+            RoadPosition = roadPosition;
+            Health = health;
+            Fuel = fuel;
+            BatteryCharge = batteryCharge;
+            Owner = owner;
+            Group = group;
+            Tires = tires;
+            Turrets = turrets;
+            TrunkItems = trunkItems;
+            Barricades = barricades;
+            Position = position;
+            Rotation = rotation;
+            PaintColor_ = paintcolor;
         }
 
         public static VehicleWrapper Create(InteractableVehicle vehicle)
@@ -86,7 +112,7 @@ namespace RFRocketLibrary.Models
                 Turrets = vehicleTurret,
                 Group = vehicle.lockedGroup.m_SteamID,
                 Owner = vehicle.lockedOwner.m_SteamID,
-                PaintColor = vehicle.PaintColor
+                PaintColor_ = vehicle.PaintColor == Color.clear || vehicle.PaintColor.a == 0 ? new byte[4]{ 0, 0, 0, 0 } : new byte[4] { vehicle.PaintColor.r, vehicle.PaintColor.g, vehicle.PaintColor.b, vehicle.PaintColor.a }
             };
 
             if (!BarricadeManager.tryGetPlant(vehicle.transform, out _, out _, out _, out var region))
@@ -126,12 +152,22 @@ namespace RFRocketLibrary.Models
         {
             var owner = new CSteamID(Owner);
             var group = new CSteamID(Group);
-            
             // Spawn Vehicle
-            var vehicle = VehicleManager.SpawnVehicleV3(GetVehicleAsset(), SkinId, MythicId, RoadPosition, Position.ToVector3(),
+            InteractableVehicle vehicle;
+            if (!PaintColor_.Equals(new byte[] { 0, 0, 0, 0 }))
+            {
+                Color32 Paint = new Color32(PaintColor_[0], PaintColor_[1], PaintColor_[2], PaintColor_[3]);
+                vehicle = VehicleManager.SpawnVehicleV3(GetVehicleAsset(), SkinId, MythicId, RoadPosition, Position.ToVector3(),
+    Rotation.ToQuaternion(), false, false, false, false, Fuel, Health, BatteryCharge,
+    owner, group, Owner != 0, null, byte.MaxValue, Paint);
+            }
+            else
+            {
+                vehicle = VehicleManager.SpawnVehicleV3(GetVehicleAsset(), SkinId, MythicId, RoadPosition, Position.ToVector3(),
                 Rotation.ToQuaternion(), false, false, false, false, Fuel, Health, BatteryCharge,
-                owner, group, Owner != 0, null, byte.MaxValue, PaintColor);
-            
+                owner, group, Owner != 0, null, byte.MaxValue);
+            }
+
             // Set Tires
             for (var i = 0; i < (Tires?.Length ?? 0); i++)
                 if (Tires != null)
