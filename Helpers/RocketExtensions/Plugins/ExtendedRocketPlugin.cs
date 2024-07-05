@@ -23,7 +23,7 @@ namespace RocketExtensions.Plugins
         public ExtendedRocketPlugin()
         {
             var configurationFile = Path.Combine(Directory,
-                string.Format(Rocket.Core.Environment.PluginConfigurationFileTemplate, Name));
+                string.Format(Rocket.Core.Environment.PluginConfigurationFileTemplate, Name, "xml"));
             var url = "";
             if (R.Settings.Instance.WebConfigurations.Enabled)
                 url = string.Format(Rocket.Core.Environment.WebConfigurationTemplate,

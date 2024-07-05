@@ -11,9 +11,9 @@ namespace RFRocketLibrary.Utils
     {
         #region Methods
 
-        public static bool GetRaycastHit(this Player player, float distance, int masks, out RaycastHit hit) =>
-            PhysicsUtility.raycast(new Ray(player.look.aim.position, player.look.aim.forward),
-                out hit, distance, masks);
+        public static bool GetRaycastHit(this Player player, float distance, int masks, out RaycastHit hit) => UnityEngine.Physics.Raycast(player.look.aim.position, player.look.aim.forward, out hit, distance, masks);
+        //PhysicsUtility.raycast(new Ray(player.look.aim.position, player.look.aim.forward),
+        //        out hit, distance, masks);
 
         public static RaycastInfo GetRaycastInfo(this Player player, int masks, float distance = float.MaxValue) =>
             RaycastInfo.FromPlayerLook(player, masks, distance);

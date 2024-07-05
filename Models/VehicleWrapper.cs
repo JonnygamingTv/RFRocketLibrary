@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using Rocket.Unturned.Player;
@@ -27,6 +27,7 @@ namespace RFRocketLibrary.Models
         public List<StructureWrapper> Structures { get; set; } = new();
         public Vector3Wrapper Position { get; set; }
         public QuartenionWrapper Rotation { get; set; }
+        public UnityEngine.Color32 PaintColor { get; set; }
         // public QuaternionWrapper Rotation { get; set; }
 
         public VehicleWrapper()
@@ -36,7 +37,7 @@ namespace RFRocketLibrary.Models
         public VehicleWrapper(ushort id, uint instanceId, ushort skinId, ushort mythicId, float roadPosition,
             ushort health, ushort fuel, ushort batteryCharge, ulong owner, ulong @group, bool[] tires,
             List<byte[]> turrets, ItemsWrapper trunkItems, List<BarricadeWrapper> barricades, Vector3Wrapper position,
-            QuartenionWrapper rotation)
+            QuartenionWrapper rotation, UnityEngine.Color32 paintcolor = default(UnityEngine.Color32))
         {
             Id = id;
             InstanceId = instanceId;
@@ -54,6 +55,7 @@ namespace RFRocketLibrary.Models
             Barricades = barricades;
             Position = position;
             Rotation = rotation;
+            PaintColor = paintcolor;
         }
 
         public static VehicleWrapper Create(InteractableVehicle vehicle)
@@ -84,6 +86,7 @@ namespace RFRocketLibrary.Models
                 Turrets = vehicleTurret,
                 Group = vehicle.lockedGroup.m_SteamID,
                 Owner = vehicle.lockedOwner.m_SteamID,
+                PaintColor = vehicle.PaintColor
             };
 
             if (!BarricadeManager.tryGetPlant(vehicle.transform, out _, out _, out _, out var region))
@@ -127,7 +130,7 @@ namespace RFRocketLibrary.Models
             // Spawn Vehicle
             var vehicle = VehicleManager.SpawnVehicleV3(GetVehicleAsset(), SkinId, MythicId, RoadPosition, Position.ToVector3(),
                 Rotation.ToQuaternion(), false, false, false, false, Fuel, Health, BatteryCharge,
-                owner, group, Owner != 0, null, byte.MaxValue);
+                owner, group, Owner != 0, null, byte.MaxValue, PaintColor);
             
             // Set Tires
             for (var i = 0; i < (Tires?.Length ?? 0); i++)
