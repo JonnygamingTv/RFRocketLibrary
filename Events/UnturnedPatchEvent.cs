@@ -1459,7 +1459,7 @@ namespace RFRocketLibrary.Events
                 OnVehicleSpawnedFromSpawnpoint?.Invoke(spawn, __result);
             }
 
-            [HarmonyPatch(typeof(VehicleManager), "SpawnVehicleV3")]
+            [HarmonyPatch(typeof(VehicleManager), "SpawnVehicleV3", typeof(VehicleAsset),typeof(ushort),typeof(ushort),typeof(float),typeof(Vector3),typeof(Quaternion),typeof(bool),typeof(bool),typeof(bool),typeof(bool),typeof(ushort),typeof(ushort),typeof(ushort),typeof(CSteamID),typeof(CSteamID),typeof(bool),typeof(byte[][]),typeof(byte))]
             [HarmonyPrefix]
             internal static bool OnPreVehicleSpawnedInvoker(out bool __state, ref VehicleAsset asset, ref ushort skinID,
                 ref ushort mythicID, ref float roadPosition, ref Vector3 point, ref Quaternion angle, ref bool sirens,
@@ -1476,13 +1476,44 @@ namespace RFRocketLibrary.Events
                 return shouldAllow;
             }
 
-            [HarmonyPatch(typeof(VehicleManager), "SpawnVehicleV3")]
+            [HarmonyPatch(typeof(VehicleManager), "SpawnVehicleV3", typeof(VehicleAsset), typeof(ushort), typeof(ushort), typeof(float), typeof(Vector3), typeof(Quaternion), typeof(bool), typeof(bool), typeof(bool), typeof(bool), typeof(ushort), typeof(ushort), typeof(ushort), typeof(CSteamID), typeof(CSteamID), typeof(bool), typeof(byte[][]), typeof(byte))]
             [HarmonyPostfix]
             internal static void OnPreVehicleSpawnedInvoker(bool __state,
                 InteractableVehicle __result,
                 VehicleAsset asset, ushort skinID, ushort mythicID, float roadPosition, Vector3 point, Quaternion angle,
                 bool sirens, bool blimp, bool headlights, bool taillights, ushort fuel, ushort health,
                 ushort batteryCharge, CSteamID owner, CSteamID group, bool locked, byte[][] turrets, byte tireAliveMask)
+            {
+                if (!__state)
+                    return;
+
+                OnVehicleSpawned?.Invoke(__result);
+            }
+
+            [HarmonyPatch(typeof(VehicleManager), "SpawnVehicleV3", typeof(VehicleAsset),typeof(ushort),typeof(ushort),typeof(float),typeof(Vector3),typeof(Quaternion),typeof(bool),typeof(bool),typeof(bool),typeof(bool),typeof(ushort),typeof(ushort),typeof(ushort),typeof(CSteamID),typeof(CSteamID),typeof(bool),typeof(byte[][]),typeof(byte),typeof(Color32))]
+            [HarmonyPrefix]
+            internal static bool OnPreVehicleSpawnedInvoker(out bool __state, ref VehicleAsset asset, ref ushort skinID,
+                ref ushort mythicID, ref float roadPosition, ref Vector3 point, ref Quaternion angle, ref bool sirens,
+                ref bool blimp,
+                ref bool headlights, ref bool taillights, ref ushort fuel, ref ushort health, ref ushort batteryCharge,
+                ref CSteamID owner,
+                ref CSteamID group, ref bool locked, ref byte[][] turrets, ref byte tireAliveMask, ref Color32 paintColor)
+            {
+                var shouldAllow = true;
+                OnPreVehicleSpawned?.Invoke(ref asset, ref skinID, ref mythicID, ref roadPosition, ref point, ref angle,
+                    ref sirens, ref blimp, ref headlights, ref taillights, ref fuel, ref health, ref batteryCharge,
+                    ref owner, ref group, ref locked, ref turrets, ref tireAliveMask, ref shouldAllow);
+                __state = shouldAllow;
+                return shouldAllow;
+            }
+
+            [HarmonyPatch(typeof(VehicleManager), "SpawnVehicleV3", typeof(VehicleAsset),typeof(ushort),typeof(ushort),typeof(float),typeof(Vector3),typeof(Quaternion),typeof(bool),typeof(bool),typeof(bool),typeof(bool),typeof(ushort),typeof(ushort),typeof(ushort),typeof(CSteamID),typeof(CSteamID),typeof(bool),typeof(byte[][]),typeof(byte),typeof(Color32))]
+            [HarmonyPostfix]
+            internal static void OnPreVehicleSpawnedInvoker(bool __state,
+                InteractableVehicle __result,
+                VehicleAsset asset, ushort skinID, ushort mythicID, float roadPosition, Vector3 point, Quaternion angle,
+                bool sirens, bool blimp, bool headlights, bool taillights, ushort fuel, ushort health,
+                ushort batteryCharge, CSteamID owner, CSteamID group, bool locked, byte[][] turrets, byte tireAliveMask, Color32 paintColor)
             {
                 if (!__state)
                     return;
