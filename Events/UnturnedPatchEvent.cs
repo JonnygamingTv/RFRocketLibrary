@@ -1548,13 +1548,13 @@ namespace RFRocketLibrary.Events
             }
 
             [HarmonyPatch(typeof(InteractableVehicle), "simulate", typeof(uint), typeof(int),
-                typeof(bool), typeof(Vector3), typeof(Quaternion), typeof(float), typeof(float), typeof(int),
+                typeof(bool), typeof(Vector3), typeof(Quaternion), typeof(float), typeof(float), typeof(float), typeof(float),
                 typeof(float))]
             [HarmonyPrefix]
             internal static void OnVehicleMovementChangedByPlayerInvoker(InteractableVehicle __instance,
                 out Vector3 __state,
                 Vector3 ___lastUpdatedPos, uint simulation, int recov, bool inputStamina,
-                Vector3 point, Quaternion angle, float newSpeed, float newPhysicsSpeed, int newTurn, float delta)
+                Vector3 point, Quaternion angle, float newSpeed, float newForwardVelocity, float newSteeringInput, float newVelocityInput, float delta)
             {
                 // var shouldAllow = true;
                 // OnPreVehicleMovementChangedByPlayer?.Invoke(__instance,
@@ -1564,11 +1564,11 @@ namespace RFRocketLibrary.Events
             }
 
             [HarmonyPatch(typeof(InteractableVehicle), "simulate", typeof(uint), typeof(int),
-                typeof(bool), typeof(Vector3), typeof(Quaternion), typeof(float), typeof(float), typeof(int),
+                typeof(bool), typeof(Vector3), typeof(Quaternion), typeof(float), typeof(float), typeof(float), typeof(float),
                 typeof(float))]
             [HarmonyPostfix]
             internal static void OnVehicleMovementChangedByPlayerInvoker(InteractableVehicle __instance, Vector3 __state, uint simulation, int recov, bool inputStamina,
-                Vector3 point, Quaternion angle, float newSpeed, float newPhysicsSpeed, int newTurn, float delta)
+                Vector3 point, Quaternion angle, float newSpeed, float newForwardVelocity, float newSteeringInput, float newVelocityInput, float delta)
             {
                 OnVehicleMovementChangedByPlayer?.Invoke(__instance,
                     __instance.passengers.ElementAtOrDefault(0)?.player?.player, __state);
