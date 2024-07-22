@@ -32,7 +32,7 @@ namespace RFRocketLibrary.Events
         public delegate void BarricadeDestroyed(BarricadeDrop drop, byte x, byte y, ushort plant);
 
         public delegate void BarricadeTransformed(byte x, byte y, ushort plant, BarricadeDrop barricade, Vector3 point,
-            byte angle_x, byte angle_y, byte angle_z);
+            Quaternion rotation);
 
         public delegate void ItemSpawned(byte x, byte y, ushort id, byte amount, byte quality,
             byte[] state, Vector3 point, uint instanceID);
@@ -285,8 +285,7 @@ namespace RFRocketLibrary.Events
 
         public delegate void StructureDestroyed(StructureDrop drop, byte x, byte y, Vector3 ragdoll);
 
-        public delegate void StructureTransformed(byte x, byte y, StructureDrop drop, Vector3 point, byte angle_x,
-            byte angle_y, byte angle_z);
+        public delegate void StructureTransformed(byte x, byte y, StructureDrop drop, Vector3 point, Quaternion rotation);
 
         public delegate void TankUpdated(BarricadeDrop drop, ushort amount);
 
@@ -1178,8 +1177,7 @@ namespace RFRocketLibrary.Events
             [HarmonyPatch(typeof(PlayerMovement), "simulate", typeof(uint), typeof(int), typeof(int), typeof(int),
                 typeof(float), typeof(float), typeof(bool), typeof(bool), typeof(float))]
             [HarmonyPrefix]
-            internal static void OnPlayerMovementChangedInvoker(PlayerMovement __instance, out Vector3 __state,
-                HashSet<LandscapeHoleVolume> ___overlappingHoleVolumes, Vector3 ___velocity, string ___materialName,
+            internal static void OnPlayerMovementChangedInvoker(PlayerMovement __instance, out Vector3 __state, Vector3 ___velocity, string ___materialName,
                 uint simulation, int recov, int input_x, int input_y, float look_x, float look_y,
                 bool inputJump, bool inputSprint, float deltaTime)
             {
@@ -1574,7 +1572,7 @@ namespace RFRocketLibrary.Events
                     __instance.passengers.ElementAtOrDefault(0)?.player?.player, __state);
             }
 
-            [HarmonyPatch(typeof(InteractableVehicle), "updateSafezoneStatus")]
+            [HarmonyPatch(typeof(InteractableVehicle), "UpdateSafezoneStatus")]
             [HarmonyPrefix]
             internal static void OnVehicleMovementChangedInvoker(InteractableVehicle __instance, out Vector3 __state,
                 Vector3 ___lastUpdatedPos, float deltaSeconds)
@@ -1582,7 +1580,7 @@ namespace RFRocketLibrary.Events
                 __state = ___lastUpdatedPos;
             }
 
-            [HarmonyPatch(typeof(InteractableVehicle), "updateSafezoneStatus")]
+            [HarmonyPatch(typeof(InteractableVehicle), "UpdateSafezoneStatus")]
             [HarmonyPostfix]
             internal static void OnVehicleMovementChangedInvoker(InteractableVehicle __instance,
                 Vector3 __state, float deltaSeconds)
@@ -1658,9 +1656,9 @@ namespace RFRocketLibrary.Events
             [HarmonyPatch(typeof(BarricadeManager), "InternalSetBarricadeTransform")]
             [HarmonyPostfix]
             internal static void OnBarricadeTransformedInvoker(byte x, byte y, ushort plant,
-                BarricadeDrop barricade, Vector3 point, byte angle_x, byte angle_y, byte angle_z)
+                BarricadeDrop barricade, Vector3 point, Quaternion rotation)
             {
-                OnBarricadeTransformed?.Invoke(x, y, plant, barricade, point, angle_x, angle_y, angle_z);
+                OnBarricadeTransformed?.Invoke(x, y, plant, barricade, point, rotation);
             }
 
             [HarmonyPatch(typeof(BarricadeManager), "destroyBarricade")]
@@ -1911,9 +1909,9 @@ namespace RFRocketLibrary.Events
             [HarmonyPatch(typeof(StructureManager), "InternalSetStructureTransform")]
             [HarmonyPostfix]
             internal static void OnStructureTransformedInvoker(byte x, byte y, StructureDrop drop,
-                Vector3 point, byte angle_x, byte angle_y, byte angle_z)
+                Vector3 point, Quaternion rotation)
             {
-                OnStructureTransformed?.Invoke(x, y, drop, point, angle_x, angle_y, angle_z);
+                OnStructureTransformed?.Invoke(x, y, drop, point, rotation);
             }
 
             [HarmonyPatch(typeof(StructureManager), "destroyStructure")]
@@ -1972,35 +1970,6 @@ namespace RFRocketLibrary.Events
                 var region = ZombieManager.regions.ElementAtOrDefault(reference);
                 var zombie = region?.zombies.ElementAtOrDefault(id);
                 OnZombieKilled?.Invoke(zombie, region, ref newRagdoll, ref newRagdollEffect);
-            }
-
-            [HarmonyPatch(typeof(Zombie), "askDamage")]
-            [HarmonyPrefix]
-            internal static bool OnPreZombieKilledInvoker(out bool __state, Zombie __instance, ushort ___health, ushort amount,
-                ref Vector3 newRagdoll, ref EPlayerKill kill, ref uint xp, ref bool trackKill, ref bool dropLoot,
-                ref EZombieStunOverride stunOverride, ref ERagdollEffect ragdollEffect)
-            {
-                __state = true;
-                if (___health > amount)
-                    return true;
-
-                var shouldAllow = true;
-                OnPreZombieKilled?.Invoke(__instance, ref newRagdoll, ref kill, ref xp, ref trackKill, ref dropLoot,
-                    ref stunOverride, ref ragdollEffect, ref shouldAllow);
-                __state = shouldAllow;
-                return shouldAllow;
-            }
-
-            [HarmonyPatch(typeof(Zombie), "askDamage")]
-            [HarmonyPostfix]
-            internal static void OnZombieKilledInvoker(bool __state, Zombie __instance, ushort amount,
-                Vector3 newRagdoll, EPlayerKill kill, uint xp, bool trackKill, bool dropLoot,
-                EZombieStunOverride stunOverride, ERagdollEffect ragdollEffect)
-            {
-                if (!__state)
-                    return;
-
-                OnZombieDamaged?.Invoke(__instance, amount, kill, xp);
             }
 
             [HarmonyPatch(typeof(ChatManager), "ReceiveChatRequest")]
@@ -2120,6 +2089,35 @@ namespace RFRocketLibrary.Events
                 var shouldAllow = true;
                 OnPrePlayerWarmUpdated?.Invoke(__instance.player, ref delta, ref shouldAllow);
                 return shouldAllow;
+            }
+
+            [HarmonyPatch(typeof(Zombie), "askDamage")]
+            [HarmonyPrefix]
+            internal static bool OnPreZombieKilledInvoker(out bool __state, Zombie __instance, ushort ___health, ushort amount,
+                ref Vector3 newRagdoll, ref EPlayerKill kill, ref uint xp, ref bool trackKill, ref bool dropLoot,
+                ref EZombieStunOverride stunOverride, ref ERagdollEffect ragdollEffect)
+            {
+                __state = true;
+                if (___health > amount)
+                    return true;
+
+                var shouldAllow = true;
+                OnPreZombieKilled?.Invoke(__instance, ref newRagdoll, ref kill, ref xp, ref trackKill, ref dropLoot,
+                    ref stunOverride, ref ragdollEffect, ref shouldAllow);
+                __state = shouldAllow;
+                return shouldAllow;
+            }
+
+            [HarmonyPatch(typeof(Zombie), "askDamage")]
+            [HarmonyPostfix]
+            internal static void OnZombieKilledInvoker(bool __state, Zombie __instance, ushort amount,
+                Vector3 newRagdoll, EPlayerKill kill, uint xp, bool trackKill = true, bool dropLoot = true,
+                EZombieStunOverride stunOverride = EZombieStunOverride.None, ERagdollEffect ragdollEffect = ERagdollEffect.NONE)
+            {
+                if (!__state)
+                    return;
+
+                OnZombieDamaged?.Invoke(__instance, amount, kill, xp);
             }
         }
 
