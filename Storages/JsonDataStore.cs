@@ -54,11 +54,11 @@ namespace RFRocketLibrary.Storages
             }
         }
 
-        public bool Save(T obj)
+        public bool Save(T obj, Formatting format = Formatting.Indented)
         {
             try
             {
-                var objData = JsonConvert.SerializeObject(obj, Formatting.Indented);
+                var objData = JsonConvert.SerializeObject(obj, format);
 
                 using var stream = new FileStream(DataPath, FileMode.Create, FileAccess.Write, FileShare.ReadWrite);
                 using var streamWriter = new StreamWriter(stream);
@@ -75,11 +75,11 @@ namespace RFRocketLibrary.Storages
             }
         }
 
-        public async Task<bool> SaveAsync(T obj)
+        public async Task<bool> SaveAsync(T obj, Formatting format = Formatting.Indented)
         {
             try
             {
-                var objData = JsonConvert.SerializeObject(obj, Formatting.Indented);
+                var objData = JsonConvert.SerializeObject(obj, format);
 
                 using var stream = new FileStream(DataPath, FileMode.Create, FileAccess.Write, FileShare.ReadWrite);
                 using var streamWriter = new StreamWriter(stream);
