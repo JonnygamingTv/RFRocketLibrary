@@ -16,6 +16,7 @@ namespace RFRocketLibrary.Utils
 
         public static bool CanBeLoaded(EDependency dependency)
         {
+            if(Rocket.Core.Plugins.RocketPlugin.IsDependencyLoaded(dependency.ToString()))return false;
             return AppDomain.CurrentDomain.GetAssemblies().All(x =>
                 x.FullName != typeof(DependencyFullName).GetField(dependency.ToString()).GetValue(null).ToString());
         }
@@ -64,7 +65,7 @@ namespace RFRocketLibrary.Utils
 
             using var wc = new WebClient();
             wc.Proxy = null;
-            byte[] assembly;
+            byte[] assembly = null;
             var cachePath = GetCachePath(dependency);
             if (dependency != EDependency.RFRocketLibrary && IsCacheExists(dependency))
             {
@@ -84,8 +85,12 @@ namespace RFRocketLibrary.Utils
                     }
                     catch
                     {
-                        assembly = wc.DownloadData(typeof(DependencyLink).GetField(dependency + "Mirror").GetValue(null)
+                        try
+                        {
+                            assembly = wc.DownloadData(typeof(DependencyLink).GetField(dependency + "Mirror").GetValue(null)
                             .ToString());
+                        }
+                        catch { }
                     }
                 }
             }
@@ -99,8 +104,12 @@ namespace RFRocketLibrary.Utils
                 }
                 catch
                 {
-                    assembly = wc.DownloadData(typeof(DependencyLink).GetField(dependency + "Mirror").GetValue(null)
-                        .ToString());
+                    try
+                    {
+                        assembly = wc.DownloadData(typeof(DependencyLink).GetField(dependency + "Mirror").GetValue(null)
+                            .ToString());
+                    }
+                    catch { }
                 }
 
                 try
