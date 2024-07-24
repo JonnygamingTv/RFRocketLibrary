@@ -14,6 +14,7 @@ namespace RFRocketLibrary.Models
     public class VehicleWrapper
     {
         public ushort Id { get; set; }
+        public Guid assetId { get; set; }
         public uint InstanceId { get; set; }
         public ushort SkinId { get; set; }
         public ushort MythicId { get; set; }
@@ -41,9 +42,10 @@ namespace RFRocketLibrary.Models
         public VehicleWrapper(ushort id, uint instanceId, ushort skinId, ushort mythicId, float roadPosition,
             ushort health, ushort fuel, ushort batteryCharge, ulong owner, ulong @group, bool[] tires,
             List<byte[]> turrets, ItemsWrapper trunkItems, List<BarricadeWrapper> barricades, Vector3Wrapper position,
-            QuartenionWrapper rotation)
+            QuartenionWrapper rotation, Guid assetid = default(Guid))
         {
             Id = id;
+            assetId = assetid;
             InstanceId = instanceId;
             SkinId = skinId;
             MythicId = mythicId;
@@ -63,9 +65,10 @@ namespace RFRocketLibrary.Models
         public VehicleWrapper(ushort id, uint instanceId, ushort skinId, ushort mythicId, float roadPosition,
     ushort health, ushort fuel, ushort batteryCharge, ulong owner, ulong @group, bool[] tires,
     List<byte[]> turrets, ItemsWrapper trunkItems, List<BarricadeWrapper> barricades, Vector3Wrapper position,
-    QuartenionWrapper rotation, byte[] paintcolor)
+    QuartenionWrapper rotation, byte[] paintcolor, Guid assetid = default(Guid))
         {
             Id = id;
+            assetId = assetid;
             InstanceId = instanceId;
             SkinId = skinId;
             MythicId = mythicId;
@@ -105,6 +108,7 @@ namespace RFRocketLibrary.Models
                 Fuel = vehicle.fuel,
                 BatteryCharge = vehicle.batteryCharge,
                 Id = vehicle.id,
+                assetId = vehicle.asset.GUID,
                 TrunkItems = vehicle.trunkItems?.items != null && vehicle.trunkItems.items.Count != 0
                     ? ItemsWrapper.Create(vehicle.trunkItems)
                     : new ItemsWrapper(),
@@ -137,7 +141,7 @@ namespace RFRocketLibrary.Models
 
         public VehicleAsset GetVehicleAsset()
         {
-            return (VehicleAsset) Assets.find(EAssetType.VEHICLE, Id);
+            return (VehicleAsset) Assets.FindBaseVehicleAssetByGuidOrLegacyId(assetId, Id);
         }
 
         public InteractableVehicle SpawnVehicle(UnturnedPlayer player)
