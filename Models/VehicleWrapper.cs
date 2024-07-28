@@ -181,7 +181,7 @@ namespace RFRocketLibrary.Models
             vehicle.sendTireAliveMaskUpdate();
 
             // Spawn Trunk Items
-            if (vehicle.trunkItems?.items != null && vehicle.trunkItems.items.Count != 0)
+            if (vehicle.trunkItems != null && TrunkItems.Items?.Count != 0)
                 foreach (var item in TrunkItems.Items)
                     vehicle.trunkItems.addItem(item.X, item.Y, item.Rotation, item.Item.ToItem());
 
