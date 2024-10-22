@@ -119,24 +119,37 @@ namespace RFRocketLibrary.Models
                 PaintColor_ = vehicle.PaintColor == Color.clear || vehicle.PaintColor.a == 0 ? new byte[4]{ 0, 0, 0, 0 } : new byte[4] { vehicle.PaintColor.r, vehicle.PaintColor.g, vehicle.PaintColor.b, vehicle.PaintColor.a }
             };
 
-            if (!BarricadeManager.tryGetPlant(vehicle.transform, out _, out _, out _, out var region))
-                return result;
-            
-            foreach (var barricade in from barricadeDrop in region.drops
-                     where !barricadeDrop.GetServersideData().barricade.isDead
-                     select BarricadeWrapper.Create(barricadeDrop))
+            if (BarricadeManager.tryGetPlant(vehicle.transform, out _, out _, out _, out var region))
             {
-                result.Barricades.Add(barricade);
+
+                foreach (var barricade in from barricadeDrop in region.drops
+                                          where !barricadeDrop.GetServersideData().barricade.isDead
+                                          select BarricadeWrapper.Create(barricadeDrop))
+                {
+                    result.Barricades.Add(barricade);
+                }
             }
-            if (!StructureManager.tryGetRegion(vehicle.transform, out _, out _, out var reg)) return result;
-            foreach (var structure in from structureDrop in reg.drops
-                                      where !structureDrop.GetServersideData().structure.isDead
-                                      select StructureWrapper.Create(structureDrop))
+
+            if (StructureManager.tryGetRegion(vehicle.transform, out _, out _, out var reg))
             {
-                result.Structures.Add(structure);
+                foreach (var structure in from structureDrop in reg.drops
+                                          where !structureDrop.GetServersideData().structure.isDead && StructureGetVehicle(structureDrop.GetServersideData().structure.asset.structure.transform) != null
+                                          select StructureWrapper.Create(structureDrop))
+                {
+                    result.Structures.Add(structure);
+                }
             }
 
             return result;
+        }
+        static Transform StructureGetVehicle(Transform structure)
+        {
+            Transform transform = structure;
+            while((transform = transform.parent) != null)
+            {
+                if (transform.gameObject.GetComponent<InteractableVehicle>() != null) return transform;
+            }
+            return null;
         }
 
         public VehicleAsset GetVehicleAsset()
