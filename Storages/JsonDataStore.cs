@@ -79,7 +79,10 @@ namespace RFRocketLibrary.Storages
                 return false;
             }
         }
-
+        public async Task<bool> SaveAsync(T obj)
+        {
+            return await SaveAsync(obj, Formatting.Indented);
+        }
         public async Task<bool> SaveAsync(T obj, Formatting format = Formatting.Indented)
         {
             try
