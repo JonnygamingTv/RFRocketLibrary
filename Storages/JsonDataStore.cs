@@ -54,6 +54,11 @@ namespace RFRocketLibrary.Storages
             }
         }
 
+        public bool Save(T obj)
+        {
+            return Save(obj, Formatting.Indented);
+        }
+
         public bool Save(T obj, Formatting format = Formatting.Indented)
         {
             try
