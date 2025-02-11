@@ -184,60 +184,62 @@ namespace RFRocketLibrary.Models
                 Rotation.ToQuaternion(), false, false, false, false, Fuel, Health, BatteryCharge,
                 owner, group, Owner != 0, null, byte.MaxValue);
             }
-
-            // Set Tires
-            for (var i = 0; i < (Tires?.Length ?? 0); i++)
-                if (Tires != null)
-                    if (vehicle.tires.ElementAtOrDefault(i) != null)
-                        vehicle.tires[i].isAlive = Tires.ElementAtOrDefault(i);
-
-            vehicle.sendTireAliveMaskUpdate();
-
-            // Spawn Trunk Items
-            if (vehicle.trunkItems != null && TrunkItems.Items?.Count != 0)
-                foreach (var item in TrunkItems.Items)
-                    vehicle.trunkItems.addItem(item.X, item.Y, item.Rotation, item.Item.ToItem());
-
-            // Spawn Barricades
-            if (Barricades.Count != 0)
-                foreach (var barricade in Barricades.Where(barricade => barricade.Id != 0))
-                {
-                    if (changeBarricadeOwner)
-                    {
-                        barricade.Owner = Owner;
-                        barricade.Group = Group;
-                    }
-                    
-                    barricade.SpawnBarricade(vehicle.transform);
-                }
-
-            // Set Turrets
-            if (vehicle.turrets != null && Turrets.Count == vehicle.turrets.Length)
+            if (vehicle != null)
             {
-                byte index = 0;
-                while (index < vehicle.turrets.Length)
-                {
-                    if (vehicle.turrets.ElementAtOrDefault(index) != null && Turrets.ElementAtOrDefault(index) != null)
-                        vehicle.turrets[index].state = Turrets[index];
-                    index += 1;
-                }
-            }
-            else
-            {
-                byte index = 0;
-                while (index < vehicle.turrets?.Length)
-                {
-                    if (vehicle.turrets?.ElementAtOrDefault(index) != null)
+
+                // Set Tires
+                for (var i = 0; i < (Tires?.Length ?? 0); i++)
+                    if (Tires != null)
+                        if (vehicle.tires.ElementAtOrDefault(i) != null)
+                            vehicle.tires[i].isAlive = Tires.ElementAtOrDefault(i);
+
+                vehicle.sendTireAliveMaskUpdate();
+
+                // Spawn Trunk Items
+                if (vehicle.trunkItems != null && TrunkItems.Items?.Count != 0)
+                    foreach (var item in TrunkItems.Items)
+                        vehicle.trunkItems.addItem(item.X, item.Y, item.Rotation, item.Item.ToItem());
+
+                // Spawn Barricades
+                if (Barricades.Count != 0)
+                    foreach (var barricade in Barricades.Where(barricade => barricade.Id != 0))
                     {
-                        var vehicleAsset = (VehicleAsset) Assets.find(EAssetType.VEHICLE, Id);
-                        var itemAsset = (ItemAsset) Assets.find(EAssetType.ITEM, vehicleAsset.turrets[index].itemID);
-                        vehicle.turrets[index].state = itemAsset.getState();
+                        if (changeBarricadeOwner)
+                        {
+                            barricade.Owner = Owner;
+                            barricade.Group = Group;
+                        }
+
+                        barricade.SpawnBarricade(vehicle.transform);
                     }
 
-                    index += 1;
+                // Set Turrets
+                if (vehicle.turrets != null && Turrets.Count == vehicle.turrets.Length)
+                {
+                    byte index = 0;
+                    while (index < vehicle.turrets.Length)
+                    {
+                        if (vehicle.turrets.ElementAtOrDefault(index) != null && Turrets.ElementAtOrDefault(index) != null)
+                            vehicle.turrets[index].state = Turrets[index];
+                        index += 1;
+                    }
+                }
+                else
+                {
+                    byte index = 0;
+                    while (index < vehicle.turrets?.Length)
+                    {
+                        if (vehicle.turrets?.ElementAtOrDefault(index) != null)
+                        {
+                            var vehicleAsset = (VehicleAsset)Assets.find(EAssetType.VEHICLE, Id);
+                            var itemAsset = (ItemAsset)Assets.find(EAssetType.ITEM, vehicleAsset.turrets[index].itemID);
+                            vehicle.turrets[index].state = itemAsset.getState();
+                        }
+
+                        index += 1;
+                    }
                 }
             }
-
             return vehicle;
         }
     }
