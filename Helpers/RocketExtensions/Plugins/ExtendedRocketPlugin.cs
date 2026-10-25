@@ -29,7 +29,9 @@ namespace RocketExtensions.Plugins
                 url = string.Format(Rocket.Core.Environment.WebConfigurationTemplate,
                     R.Settings.Instance.WebConfigurations.Url, Name, R.Implementation.InstanceId);
             else if (File.Exists(configurationFile))
-                url = File.ReadAllLines(configurationFile).First().Trim();
+                // An empty configuration file must not crash plugin loading (First() used to
+                // throw on it); fall through to the plain XML asset like a missing file would.
+                url = File.ReadAllLines(configurationFile).FirstOrDefault()?.Trim() ?? string.Empty;
 
             if (Uri.TryCreate(url, UriKind.Absolute, out var uri))
                 Configuration = new WebXMLFileAsset<TPluginConfig>(uri, null, _ => { base.LoadPlugin(); });

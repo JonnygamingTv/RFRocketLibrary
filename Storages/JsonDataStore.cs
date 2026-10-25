@@ -26,9 +26,7 @@ namespace RFRocketLibrary.Storages
             }
             catch (Exception e)
             {
-                var caller = new StackTrace().GetFrame(1).GetMethod().ReflectedType.Assembly.GetName().Name;
-                Logger.LogError($"[{caller}] [ERROR] JsonDataStore Load: {e.Message}");
-                Logger.LogError($"[{caller}] [ERROR] Details: {e}");
+                ReportError("Load", e);
                 return null;
             }
         }
@@ -47,9 +45,7 @@ namespace RFRocketLibrary.Storages
             }
             catch (Exception e)
             {
-                var caller = new StackTrace().GetFrame(1).GetMethod().ReflectedType.Assembly.GetName().Name;
-                Logger.LogError($"[{caller}] [ERROR] JsonDataStore LoadAsync: {e.Message}");
-                Logger.LogError($"[{caller}] [ERROR] Details: {e}");
+                ReportError("LoadAsync", e);
                 return null;
             }
         }
@@ -64,18 +60,13 @@ namespace RFRocketLibrary.Storages
             try
             {
                 var objData = JsonConvert.SerializeObject(obj, format);
-
-                using var stream = new FileStream(DataPath, FileMode.Create, FileAccess.Write, FileShare.ReadWrite);
-                using var streamWriter = new StreamWriter(stream);
-                streamWriter.Write(objData);
+                WriteAllTextAtomic(DataPath, objData);
 
                 return true;
             }
             catch (Exception e)
             {
-                var caller = new StackTrace().GetFrame(1).GetMethod().ReflectedType.Assembly.GetName().Name;
-                Logger.LogError($"[{caller}] [ERROR] JsonDataStore SaveAsync: {e.Message}");
-                Logger.LogError($"[{caller}] [ERROR] Details: {e}");
+                ReportError("Save", e);
                 return false;
             }
         }
@@ -87,20 +78,83 @@ namespace RFRocketLibrary.Storages
         {
             try
             {
-                var objData = JsonConvert.SerializeObject(obj, format);
-
-                using var stream = new FileStream(DataPath, FileMode.Create, FileAccess.Write, FileShare.ReadWrite);
-                using var streamWriter = new StreamWriter(stream);
-                await streamWriter.WriteAsync(objData);
+                // Serialization can be CPU-heavy for large datasets; keep it off the caller's thread.
+                var objData = await Task.Run(() => JsonConvert.SerializeObject(obj, format));
+                await Task.Run(() => WriteAllTextAtomic(DataPath, objData));
 
                 return true;
             }
             catch (Exception e)
             {
-                var caller = new StackTrace().GetFrame(1).GetMethod().ReflectedType.Assembly.GetName().Name;
-                Logger.LogError($"[{caller}] [ERROR] JsonDataStore SaveAsync: {e.Message}");
-                Logger.LogError($"[{caller}] [ERROR] Details: {e}");
+                ReportError("SaveAsync", e);
                 return false;
+            }
+        }
+
+        /// <summary>
+        /// Reports a storage failure through the Rocket log. The report is itself guarded:
+        /// Rocket's logging chain bottoms out in the game console (SDG.Unturned.UnturnedLog,
+        /// which subscribes to Unity engine callbacks), so on hosts without the game the
+        /// report would otherwise replace the storage failure with a crash. The log output
+        /// format is unchanged on a regular server.
+        /// </summary>
+        private static void ReportError(string operation, Exception e)
+        {
+            try
+            {
+                var caller = new StackTrace().GetFrame(2).GetMethod().ReflectedType.Assembly.GetName().Name;
+                Logger.LogError($"[{caller}] [ERROR] JsonDataStore {operation}: {e.Message}");
+                Logger.LogError($"[{caller}] [ERROR] Details: {e}");
+            }
+            catch
+            {
+                // The storage result matters more than the log line.
+            }
+        }
+
+        /// <summary>
+        /// Writes the file without truncating the destination first: the payload goes to a
+        /// temporary file in the same directory, which is then swapped in via File.Replace /
+        /// File.Move. A crash mid-write therefore leaves the previous content intact instead
+        /// of a truncated file. If the destination is exclusively locked by another process
+        /// (Replace is not permitted), fall back to the historical direct-write behavior so
+        /// existing integrations keep working.
+        /// </summary>
+        private static void WriteAllTextAtomic(string dataPath, string contents)
+        {
+            var directory = Path.GetDirectoryName(dataPath);
+            if (!string.IsNullOrEmpty(directory) && !Directory.Exists(directory))
+                Directory.CreateDirectory(directory);
+
+            var tempPath = dataPath + ".tmp";
+            try
+            {
+                using (var stream = new FileStream(tempPath, FileMode.Create, FileAccess.Write, FileShare.ReadWrite))
+                using (var streamWriter = new StreamWriter(stream))
+                    streamWriter.Write(contents);
+
+                if (File.Exists(dataPath))
+                    File.Replace(tempPath, dataPath, null);
+                else
+                    File.Move(tempPath, dataPath);
+            }
+            catch (IOException)
+            {
+                // Destination locked or replace unsupported on this volume: preserve the old
+                // truncate-and-write semantics instead of failing the save outright.
+                using (var stream = new FileStream(dataPath, FileMode.Create, FileAccess.Write, FileShare.ReadWrite))
+                using (var streamWriter = new StreamWriter(stream))
+                    streamWriter.Write(contents);
+
+                try
+                {
+                    if (File.Exists(tempPath))
+                        File.Delete(tempPath);
+                }
+                catch
+                {
+                    // A leftover .tmp file is harmless; the next save overwrites it.
+                }
             }
         }
 

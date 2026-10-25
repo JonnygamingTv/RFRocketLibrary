@@ -27,6 +27,11 @@ namespace RFRocketLibrary
 
         public static void Uninitialize()
         {
+            // The counters are unsigned; an unbalanced detach would wrap them and
+            // permanently break reference counting for every other plugin.
+            if (AttachedAssembly == 0)
+                return;
+
             AttachedAssembly--;
             if (!Initialized)
                 return;
@@ -52,12 +57,18 @@ namespace RFRocketLibrary
 
         public static void DetachEvent(bool withHarmony = false)
         {
+            if (Event_AttachedAssembly == 0)
+                return;
+
             Event_AttachedAssembly--;
             if (Event_AttachedAssembly == 0)
                 EventBus.Unload();
 
             if (withHarmony)
             {
+                if (Event_AttachedAssemblyWithHarmony == 0)
+                    return;
+
                 Event_AttachedAssemblyWithHarmony--;
                 if (Event_AttachedAssemblyWithHarmony == 0)
                     EventBus.UnloadHarmony();

@@ -170,6 +170,7 @@ namespace RocketExtensions.Plugins
         }
 
         private List<RunningCommand> RunningCommands { get; } = new();
+        private readonly object _runningCommandsLock = new();
         private ExtendedRocketPlugin? _extendedPlugin;
 
         public ExtendedRocketPlugin? ExtendedPlugin
@@ -193,15 +194,20 @@ namespace RocketExtensions.Plugins
         {
             var context = new CommandContext(caller, this, command);
 
-            var runningCommand = RunningCommands.FirstOrDefault(x =>
-                x.Caller.Id.Equals(context.Player.Id, StringComparison.OrdinalIgnoreCase));
-            if (runningCommand == null)
+            // Commands may be dispatched from several threads (Rocket command handling and
+            // the command queue), so the reentrancy registry is guarded by a lock.
+            lock (_runningCommandsLock)
             {
-                runningCommand = new RunningCommand {Caller = context.Player, Instances = 1};
-                RunningCommands.Add(runningCommand);
+                var runningCommand = RunningCommands.FirstOrDefault(x =>
+                    x.Caller.Id.Equals(context.Player.Id, StringComparison.OrdinalIgnoreCase));
+                if (runningCommand == null)
+                {
+                    runningCommand = new RunningCommand {Caller = context.Player, Instances = 1};
+                    RunningCommands.Add(runningCommand);
+                }
+                else
+                    runningCommand.Instances++;
             }
-            else
-                runningCommand.Instances++;
 
             if (ExtendedPlugin == null)
                 Task.Run(async () => await Run(context));
@@ -211,8 +217,20 @@ namespace RocketExtensions.Plugins
 
         private async Task Run(CommandContext context)
         {
-            var runningCommand = RunningCommands.First(x =>
-                x.Caller.Id.Equals(context.Player.Id, StringComparison.OrdinalIgnoreCase));
+            RunningCommand runningCommand;
+            lock (_runningCommandsLock)
+            {
+                runningCommand = RunningCommands.FirstOrDefault(x =>
+                    x.Caller.Id.Equals(context.Player.Id, StringComparison.OrdinalIgnoreCase));
+                if (runningCommand == null)
+                {
+                    // Defensive: Execute always registers the caller first, but never trust
+                    // cross-thread ordering enough to dereference null here.
+                    runningCommand = new RunningCommand {Caller = context.Player, Instances = 1};
+                    RunningCommands.Add(runningCommand);
+                }
+            }
+
             try
             {
                 if (!AllowSimultaneousCalls && runningCommand.Instances > 1)
@@ -256,7 +274,10 @@ namespace RocketExtensions.Plugins
             }
             finally
             {
-                runningCommand.Instances--;
+                lock (_runningCommandsLock)
+                {
+                    runningCommand.Instances--;
+                }
             }
         }
 
@@ -279,9 +300,6 @@ namespace RocketExtensions.Plugins
 
             if (configInstance is T t)
                 return t;
-
-            if (configInstance is T instance)
-                return instance;
 
             return default;
         }

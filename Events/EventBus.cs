@@ -65,7 +65,6 @@ namespace RFRocketLibrary.Events
             PlayerLife.OnSelectingRespawnPoint += UnturnedEvent.OnPrePlayerRespawnedInvoker;
             PlayerLife.OnRevived_Global += UnturnedEvent.OnPlayerRevivedInvoker;
             PlayerLife.OnTellBleeding_Global += UnturnedEvent.OnPlayerBledInvoker;
-            PlayerLife.OnTellBroken_Global += UnturnedEvent.OnPlayerBrokeBoneInvoker;
             PlayerLife.OnTellHealth_Global += UnturnedEvent.OnPlayerHealthUpdatedInvoker;
             PlayerLife.OnTellFood_Global += UnturnedEvent.OnPlayerFoodUpdatedInvoker;
             PlayerLife.OnTellWater_Global += UnturnedEvent.OnPlayerWaterUpdatedInvoker;
@@ -197,7 +196,6 @@ namespace RFRocketLibrary.Events
             PlayerLife.OnSelectingRespawnPoint -= UnturnedEvent.OnPrePlayerRespawnedInvoker;
             PlayerLife.OnRevived_Global -= UnturnedEvent.OnPlayerRevivedInvoker;
             PlayerLife.OnTellBleeding_Global -= UnturnedEvent.OnPlayerBledInvoker;
-            PlayerLife.OnTellBroken_Global -= UnturnedEvent.OnPlayerBrokeBoneInvoker;
             PlayerLife.OnTellHealth_Global -= UnturnedEvent.OnPlayerHealthUpdatedInvoker;
             PlayerLife.OnTellFood_Global -= UnturnedEvent.OnPlayerFoodUpdatedInvoker;
             PlayerLife.OnTellWater_Global -= UnturnedEvent.OnPlayerWaterUpdatedInvoker;

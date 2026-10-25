@@ -23,23 +23,23 @@ namespace RFRocketLibrary.Storages
                     using var stream = File.OpenText(DataPath);
                     instance = (T) Serializer.Deserialize(stream);
                 }
-                
+
                 if (callback == null)
                     return;
-                
+
                 callback(this);
             }
             catch (Exception e)
             {
-                var caller = new StackTrace().GetFrame(1).GetMethod().ReflectedType.Assembly.GetName().Name;
-                Logger.LogError($"[{caller}] [ERROR] XmlDataStore Load: {e.Message}");
-                Logger.LogError($"[{caller}] [ERROR] Details: {e}");
+                ReportError("Load", e);
             }
         }
 
         public Task LoadAsync(AssetLoaded<T>? callback = null)
         {
-            Task.Factory.StartNew(() =>
+            // Return the actual background task so awaiting callers observe completion;
+            // the previous implementation returned an already-completed task.
+            return Task.Factory.StartNew(() =>
             {
                 try
                 {
@@ -47,12 +47,9 @@ namespace RFRocketLibrary.Storages
                 }
                 catch (Exception e)
                 {
-                    var caller = new StackTrace().GetFrame(1).GetMethod().ReflectedType.Assembly.GetName().Name;
-                    Logger.LogError($"[{caller}] [ERROR] XmlDataStore LoadAsync: {e.Message}");
-                    Logger.LogError($"[{caller}] [ERROR] Details: {e}");
+                    ReportError("LoadAsync", e);
                 }
             }, CancellationToken.None, TaskCreationOptions.None, TaskScheduler.Default);
-            return Task.CompletedTask;
         }
 
         public override T Save()
@@ -63,8 +60,6 @@ namespace RFRocketLibrary.Storages
                 if (!string.IsNullOrEmpty(directoryName) && !Directory.Exists(directoryName))
                     Directory.CreateDirectory(directoryName);
 
-                using var stream = new FileStream(DataPath, FileMode.Create, FileAccess.Write, FileShare.ReadWrite);
-                using var streamWriter = new StreamWriter(stream);
                 if (instance == null)
                 {
                     if (DefaultInstance == null)
@@ -75,16 +70,43 @@ namespace RFRocketLibrary.Storages
                     else
                         instance = DefaultInstance;
                 }
-                Serializer.Serialize(streamWriter, instance);
-                streamWriter.Close();
-                stream.Close();
+
+                var tempPath = DataPath + ".tmp";
+                try
+                {
+                    using (var stream = new FileStream(tempPath, FileMode.Create, FileAccess.Write, FileShare.ReadWrite))
+                    using (var streamWriter = new StreamWriter(stream))
+                        Serializer.Serialize(streamWriter, instance);
+
+                    if (File.Exists(DataPath))
+                        File.Replace(tempPath, DataPath, null);
+                    else
+                        File.Move(tempPath, DataPath);
+                }
+                catch (IOException)
+                {
+                    // Destination locked or replace unsupported on this volume: preserve the
+                    // historical truncate-and-write behavior instead of failing the save.
+                    using (var stream = new FileStream(DataPath, FileMode.Create, FileAccess.Write, FileShare.ReadWrite))
+                    using (var streamWriter = new StreamWriter(stream))
+                        Serializer.Serialize(streamWriter, instance);
+
+                    try
+                    {
+                        if (File.Exists(tempPath))
+                            File.Delete(tempPath);
+                    }
+                    catch
+                    {
+                        // A leftover .tmp file is harmless; the next save overwrites it.
+                    }
+                }
+
                 return instance;
             }
             catch (Exception e)
             {
-                var caller = new StackTrace().GetFrame(1).GetMethod().ReflectedType.Assembly.GetName().Name;
-                Logger.LogError($"[{caller}] [ERROR] XmlDataStore Save: {e.Message}");
-                Logger.LogError($"[{caller}] [ERROR] Details: {e}");
+                ReportError("Save", e);
                 return null;
             }
         }
@@ -101,12 +123,31 @@ namespace RFRocketLibrary.Storages
                 catch (Exception e)
                 {
                     source.SetException(e);
-                    var caller = new StackTrace().GetFrame(1).GetMethod().ReflectedType.Assembly.GetName().Name;
-                    Logger.LogError($"[{caller}] [ERROR] XmlDataStore SaveAsync: {e.Message}");
-                    Logger.LogError($"[{caller}] [ERROR] Details: {e}");
+                    ReportError("SaveAsync", e);
                 }
             }, CancellationToken.None, TaskCreationOptions.None, TaskScheduler.Default);
             return source.Task;
+        }
+
+        /// <summary>
+        /// Reports a storage failure through the Rocket log. The report is itself guarded:
+        /// Rocket's logging chain bottoms out in the game console (SDG.Unturned.UnturnedLog,
+        /// which subscribes to Unity engine callbacks), so on hosts without the game the
+        /// report would otherwise replace the storage failure with a crash. The log output
+        /// format is unchanged on a regular server.
+        /// </summary>
+        private static void ReportError(string operation, Exception e)
+        {
+            try
+            {
+                var caller = new StackTrace().GetFrame(2).GetMethod().ReflectedType.Assembly.GetName().Name;
+                Logger.LogError($"[{caller}] [ERROR] XmlDataStore {operation}: {e.Message}");
+                Logger.LogError($"[{caller}] [ERROR] Details: {e}");
+            }
+            catch
+            {
+                // The storage result matters more than the log line.
+            }
         }
 
         #endregion
@@ -118,7 +159,7 @@ namespace RFRocketLibrary.Storages
             DefaultInstance = defaultInstance;
             if (!string.IsNullOrEmpty(dir) && !Directory.Exists(dir))
                 Directory.CreateDirectory(dir);
-            
+
             if (!File.Exists(DataPath))
                 File.CreateText(DataPath).Dispose();
         }

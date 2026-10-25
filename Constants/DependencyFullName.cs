@@ -6,7 +6,7 @@
         public static string Harmony = "0Harmony, Version=2.2.1.1, Culture=neutral, PublicKeyToken=null";
         public static string I18N = "I18N, Version=4.0.0.0, Culture=neutral, PublicKeyToken=0738eb9f132ed756";
         public static string I18NWest = "I18N.West, Version=4.0.0.0, Culture=neutral, PublicKeyToken=0738eb9f132ed756";
-        public static string LiteDB = "LiteDB, Version=5.0.11.0, Culture=neutral, PublicKeyToken=4ee40123013c9f27";
+        public static string LiteDB = "LiteDB, Version=5.0.21.0, Culture=neutral, PublicKeyToken=4ee40123013c9f27";
         public static string LiteDBAsync = "litedbasync, Version=0.0.11.0, Culture=neutral, PublicKeyToken=null";
         public static string MySqlData = "MySql.Data, Version=8.0.29.0, Culture=neutral, PublicKeyToken=c5687fc88969c44d";
         public static string NewtonsoftJson = "Newtonsoft.Json, Version=13.0.0.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed";

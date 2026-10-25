@@ -1,4 +1,5 @@
 ﻿using SDG.Unturned;
+#pragma warning disable CS0618 // Asset.assetOrigin is obsolete, but its replacement (Asset.origin) is internal; the public getter remains the supported way to detect official assets.
 
 namespace RFRocketLibrary.Helpers
 {

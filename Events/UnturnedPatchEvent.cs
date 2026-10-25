@@ -2112,7 +2112,7 @@ namespace RFRocketLibrary.Events
             [HarmonyPostfix]
             internal static void OnZombieKilledInvoker(bool __state, Zombie __instance, ushort amount,
                 Vector3 newRagdoll, EPlayerKill kill, uint xp, bool trackKill = true, bool dropLoot = true,
-                EZombieStunOverride stunOverride = EZombieStunOverride.None, ERagdollEffect ragdollEffect = ERagdollEffect.NONE)
+                EZombieStunOverride stunOverride = EZombieStunOverride.None, ERagdollEffect ragdollEffect = ERagdollEffect.None)
             {
                 if (!__state)
                     return;

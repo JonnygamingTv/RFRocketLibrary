@@ -26,11 +26,13 @@
         public static string I18NWestMirror =
             "https://gitlab.com/RiceField-Plugins/LibraryDependencies/-/raw/main/I18N.West.4.0.0.0.dll";
 
+        // LiteDB 5.0.21 (>= 5.0.13 fixes GHSA-3x49-g6rc-c284 / CVE-2022-23535).
+        // Hosted in this repository's Libs folder until mirrored by RiceField-Plugins/LibraryDependencies.
         public static string LiteDB =
-            "https://cdn.jsdelivr.net/gh/RiceField-Plugins/LibraryDependencies@main/LiteDB.5.0.11.0.dll";
+            "https://cdn.jsdelivr.net/gh/CatzTimes/RFRocketLibrary@fix/net481-litedb-upgrade-security/Libs/LiteDB.5.0.21.0.dll";
 
         public static string LiteDBMirror =
-            "https://gitlab.com/RiceField-Plugins/LibraryDependencies/-/raw/main/LiteDB.5.0.11.0.dll";
+            "https://raw.githubusercontent.com/CatzTimes/RFRocketLibrary/fix/net481-litedb-upgrade-security/Libs/LiteDB.5.0.21.0.dll";
 
         public static string LiteDBAsync =
             "https://cdn.jsdelivr.net/gh/RiceField-Plugins/LibraryDependencies@main/litedbasync.0.0.11.dll";

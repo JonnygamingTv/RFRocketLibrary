@@ -41,10 +41,7 @@ namespace RocketExtensions
 
             if (instance is T t)
                 return t;
-            
-            if (instance is T plugin)
-                return plugin;
-            
+
             return default;
         }
 

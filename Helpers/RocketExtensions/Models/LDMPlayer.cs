@@ -395,24 +395,18 @@ namespace RocketExtensions.Models
             if (Player == null)
                 return;
 
-            var strings = ip.Split('.').ToArray();
-            if (strings.Length != 4)
+            // SDG encodes IPv4 as (b1<<24)|(b2<<16)|(b3<<8)|b4 — see SDG.Unturned.Parser
+            // .TryGetUInt32FromIP. The previous BitConverter.ToUInt32 call is little-endian
+            // on x86, which reversed the octets and relayed players to a mirrored address.
+            var strings = ip.Split('.');
+            if (strings.Length != 4
+                || !byte.TryParse(strings[0], out var b1)
+                || !byte.TryParse(strings[1], out var b2)
+                || !byte.TryParse(strings[2], out var b3)
+                || !byte.TryParse(strings[3], out var b4))
                 throw new InvalidCastException($"Cannot convert ip '{ip}' into a numeric IP address");
 
-            uint ipAddress;
-            try
-            {
-                var b1 = byte.Parse(strings[0]);
-                var b2 = byte.Parse(strings[1]);
-                var b3 = byte.Parse(strings[2]);
-                var b4 = byte.Parse(strings[3]);
-                var buffer = new[] {b1, b2, b3, b4};
-                ipAddress = BitConverter.ToUInt32(buffer, 0);
-            }
-            catch (FormatException)
-            {
-                throw new InvalidCastException($"Cannot convert ip '{ip}' into a numeric IP address");
-            }
+            var ipAddress = (uint) (b1 << 24 | b2 << 16 | b3 << 8 | b4);
 
             await ThreadTool.RunOnGameThreadAsync(() => Player.sendRelayToServer(ipAddress, port, password, showMenu));
         }

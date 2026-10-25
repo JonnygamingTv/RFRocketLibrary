@@ -1,2 +1,6 @@
 # Auto detect text files and perform LF normalization
 * text=auto
+# Binaries must never be touched by end-of-file normalization.
+*.dll binary
+*.png binary
+*.jpg binary

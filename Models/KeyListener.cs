@@ -1,5 +1,8 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Threading;
+using RFRocketLibrary.Utils;
+using Rocket.Core.Logging;
 using Rocket.Unturned.Player;
 using RocketExtensions.Utilities;
 
@@ -18,7 +21,7 @@ namespace RFRocketLibrary.Models
         /// </summary>
         private const int UpdateRate = 100;
 
-        private bool _isRunning;
+        private volatile bool _isRunning;
         private readonly Dictionary<int, bool> _lastMapping = new();
 
         public delegate void Key(UnturnedPlayer player, UnturnedKey key);
@@ -30,25 +33,26 @@ namespace RFRocketLibrary.Models
 
         public event Key? OnKeyDown;
 
-        public bool JumpKeyDown => _lastMapping[(int)UnturnedKey.Jump];
-        public bool SprintKeyDown => _lastMapping[(int)UnturnedKey.Sprint];
-        public bool LPunchKeyDown => _lastMapping[(int)UnturnedKey.LPunch];
-        public bool RPunchKeyDown => _lastMapping[(int)UnturnedKey.RPunch];
-        public bool ProneKeyDown => _lastMapping[(int)UnturnedKey.Prone];
-        public bool CrouchKeyDown => _lastMapping[(int)UnturnedKey.Crouch];
-        public bool LeanLeftKeyDown => _lastMapping[(int)UnturnedKey.LeanLeft];
-        public bool LeanRightKeyDown => _lastMapping[(int)UnturnedKey.LeanRight];
-        public bool CodeHotkey1Down => _lastMapping[(int)UnturnedKey.CodeHotkey1];
-        public bool CodeHotkey2Down => _lastMapping[(int)UnturnedKey.CodeHotkey2];
-        public bool CodeHotkey3Down => _lastMapping[(int)UnturnedKey.CodeHotkey3];
-        public bool CodeHotkey4Down => _lastMapping[(int)UnturnedKey.CodeHotkey4];
-        public bool CodeHotkey5Down => _lastMapping[(int)UnturnedKey.CodeHotkey5];
+        public bool JumpKeyDown => IsKeyDown(UnturnedKey.Jump);
+        public bool SprintKeyDown => IsKeyDown(UnturnedKey.Sprint);
+        public bool LPunchKeyDown => IsKeyDown(UnturnedKey.LPunch);
+        public bool RPunchKeyDown => IsKeyDown(UnturnedKey.RPunch);
+        public bool ProneKeyDown => IsKeyDown(UnturnedKey.Prone);
+        public bool CrouchKeyDown => IsKeyDown(UnturnedKey.Crouch);
+        public bool LeanLeftKeyDown => IsKeyDown(UnturnedKey.LeanLeft);
+        public bool LeanRightKeyDown => IsKeyDown(UnturnedKey.LeanRight);
+        public bool CodeHotkey1Down => IsKeyDown(UnturnedKey.CodeHotkey1);
+        public bool CodeHotkey2Down => IsKeyDown(UnturnedKey.CodeHotkey2);
+        public bool CodeHotkey3Down => IsKeyDown(UnturnedKey.CodeHotkey3);
+        public bool CodeHotkey4Down => IsKeyDown(UnturnedKey.CodeHotkey4);
+        public bool CodeHotkey5Down => IsKeyDown(UnturnedKey.CodeHotkey5);
 
         public KeyListener(UnturnedPlayer player)
         {
             _player = player;
             _isRunning = true;
             var runThread = new Thread(UpdateLoop);
+            runThread.IsBackground = true;
             runThread.Start();
         }
 
@@ -57,41 +61,81 @@ namespace RFRocketLibrary.Models
             _isRunning = false;
         }
 
-        private async void UpdateLoop()
+        /// <summary>
+        /// Returns the last polled state of a key, or false before the first poll
+        /// (the mapping used to be read with a direct indexer, which threw before
+        /// the polling thread had seeded it).
+        /// </summary>
+        public bool IsKeyDown(UnturnedKey key)
+        {
+            lock (_lastMapping)
+            {
+                return _lastMapping.TryGetValue((int) key, out var isDown) && isDown;
+            }
+        }
+
+        private void UpdateLoop()
         {
             while (_isRunning)
             {
-                for (var i = 0; i < _player.Player.input.keys.Length - 1; i++)
+                try
                 {
-                    var current = _player.Player.input.keys[i];
-                    if (_lastMapping.ContainsKey(i))
+                    PollOnce();
+                }
+                catch (Exception e)
+                {
+                    // Reading input of a player whose connection or Player object is already
+                    // gone must not take the server down (the loop used to run as async void,
+                    // so any exception here crashed the whole process). Stop watching instead;
+                    // plugins can construct a new KeyListener for reconnecting players.
+                    Logger.LogWarning($"[KeyListener] Stopped watching '{_player.DisplayName}': {e.Message}");
+                    return;
+                }
+
+                Thread.Sleep(UpdateRate);
+            }
+        }
+
+        private void PollOnce()
+        {
+            var input = _player.Player.input;
+            // The previous loop stopped one element short (Length - 1) and never polled
+            // the last slot; unmapped slots are filtered out by IntToUKey anyway.
+            for (var i = 0; i < input.keys.Length; i++)
+            {
+                var current = input.keys[i];
+                bool last;
+                lock (_lastMapping)
+                {
+                    if (!_lastMapping.TryGetValue(i, out last))
                     {
-                        var last = _lastMapping[i];
-                        if (last == current) 
-                            continue;
-                        
-                        var key = IntToUKey(i);
-                        if (key != UnturnedKey.Unknown)
-                        {
-                            await ThreadTool.RunOnGameThreadAsync(() => { OnKeyUpdated?.Invoke(_player, key, current);});
-                            if (current)
-                            {
-                                await ThreadTool.RunOnGameThreadAsync(() => { OnKeyDown?.Invoke(_player, key);});
-                            }
-                            else
-                            {
-                                await ThreadTool.RunOnGameThreadAsync(() => { OnKeyUp?.Invoke(_player, key);});
-                            }
-                        }
-                        
                         _lastMapping[i] = current;
-                    }
-                    else
-                    {
-                        _lastMapping[i] = current;
+                        continue;
                     }
                 }
-                Thread.Sleep(UpdateRate);
+
+                if (last == current)
+                    continue;
+
+                var key = IntToUKey(i);
+                lock (_lastMapping)
+                {
+                    _lastMapping[i] = current;
+                }
+
+                if (key == UnturnedKey.Unknown)
+                    continue;
+
+                if (current)
+                {
+                    ThreadTool.RunOnGameThreadAsync(() => OnKeyUpdated?.Invoke(_player, key, current)).Forget();
+                    ThreadTool.RunOnGameThreadAsync(() => OnKeyDown?.Invoke(_player, key)).Forget();
+                }
+                else
+                {
+                    ThreadTool.RunOnGameThreadAsync(() => OnKeyUpdated?.Invoke(_player, key, current)).Forget();
+                    ThreadTool.RunOnGameThreadAsync(() => OnKeyUp?.Invoke(_player, key)).Forget();
+                }
             }
         }
 

@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Concurrent;
+using System.Collections.Generic;
 using System.Linq;
 using Rocket.Core.Logging;
 using Rocket.Unturned.Player;
@@ -206,8 +207,11 @@ namespace RocketExtensions.Models
                 }
                 else
                 {
-                    var assets = Assets.find(EAssetType.ITEM)
-                        .Where(x => x is ItemAsset {itemName: { }} itemAsset &&
+                    // Assets.find(EAssetType) is obsolete; use the List<T> based API instead.
+                    var candidates = new List<ItemAsset>();
+                    Assets.find(candidates);
+                    var assets = candidates
+                        .Where(itemAsset => !string.IsNullOrEmpty(itemAsset.itemName) &&
                                     itemAsset.itemName.IndexOf(input, StringComparison.OrdinalIgnoreCase) !=
                                     -1).ToList();
                     if (assets.Any())
@@ -233,8 +237,12 @@ namespace RocketExtensions.Models
                 }
                 else
                 {
-                    var byName = Assets.find(EAssetType.ITEM)
-                        .Where(x => x is VehicleAsset {vehicleName: { }} vehicleAsset && vehicleAsset.vehicleName.IndexOf(input,
+                    // Fixed latent bug: this branch used to search the ITEM asset bucket,
+                    // so looking up vehicles by name never matched anything.
+                    var candidates = new List<VehicleAsset>();
+                    Assets.find(candidates);
+                    var byName = candidates
+                        .Where(vehicleAsset => !string.IsNullOrEmpty(vehicleAsset.vehicleName) && vehicleAsset.vehicleName.IndexOf(input,
                             StringComparison.OrdinalIgnoreCase) != -1).ToList();
                     if (byName.Any())
                     {
@@ -259,8 +267,10 @@ namespace RocketExtensions.Models
                 }
                 else
                 {
-                    var byName = Assets.find(EAssetType.ANIMAL)
-                        .Where(x => x is AnimalAsset {animalName: { }} animalAsset && animalAsset.animalName.IndexOf(input,
+                    var candidates = new List<AnimalAsset>();
+                    Assets.find(candidates);
+                    var byName = candidates
+                        .Where(animalAsset => !string.IsNullOrEmpty(animalAsset.animalName) && animalAsset.animalName.IndexOf(input,
                             StringComparison.OrdinalIgnoreCase) != -1).ToList();
                     if (byName.Any())
                     {

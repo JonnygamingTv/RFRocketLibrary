@@ -109,6 +109,11 @@ namespace RFRocketLibrary.Models
                 BatteryCharge = vehicle.batteryCharge,
                 Id = vehicle.id,
                 assetId = vehicle.asset.GUID,
+                // Persisted by the game's own save/load path as well (VehicleManager passes
+                // item.roadPosition back into SpawnVehicleV3 when restoring save data), so a
+                // garage snapshot should keep it too — it matters for TRAIN positioning.
+                InstanceId = vehicle.instanceID,
+                RoadPosition = vehicle.roadPosition,
                 TrunkItems = vehicle.trunkItems?.items != null && vehicle.trunkItems.items.Count != 0
                     ? ItemsWrapper.Create(vehicle.trunkItems)
                     : new ItemsWrapper(),
@@ -133,7 +138,9 @@ namespace RFRocketLibrary.Models
             if (StructureManager.tryGetRegion(vehicle.transform, out _, out _, out var reg))
             {
                 foreach (var structure in from structureDrop in reg.drops
-                                          where !structureDrop.GetServersideData().structure.isDead && StructureGetVehicle(structureDrop.GetServersideData().structure.asset.structure.transform) != null
+                                          where !structureDrop.GetServersideData().structure.isDead
+                                          let structurePrefab = structureDrop.GetServersideData().structure.asset?.structure
+                                          where structurePrefab != null && StructureGetVehicle(structurePrefab.transform) != null
                                           select StructureWrapper.Create(structureDrop))
                 {
                     result.Structures.Add(structure);
@@ -171,7 +178,14 @@ namespace RFRocketLibrary.Models
             var group = new CSteamID(Group);
             // Spawn Vehicle
             InteractableVehicle vehicle;
-            if (!PaintColor_.Equals(new byte[] { 0, 0, 0, 0 }))
+            // byte[] is a reference type, so Equals() compared object identities and was
+            // always false; compare the payload instead. An all-zero color means "no paint",
+            // which is what the game's own no-paint SpawnVehicleV3 overload passes internally
+            // (Color32(0,0,0,0) — VehicleManager.addVehicle stores it verbatim), so both
+            // branches stay behaviorally identical; this only restores the intended logic.
+            var hasPaint = PaintColor_ is {Length: 4} paintBytes
+                           && (paintBytes[0] != 0 || paintBytes[1] != 0 || paintBytes[2] != 0 || paintBytes[3] != 0);
+            if (hasPaint)
             {
                 Color32 Paint = new Color32(PaintColor_[0], PaintColor_[1], PaintColor_[2], PaintColor_[3]);
                 vehicle = VehicleManager.SpawnVehicleV3(GetVehicleAsset(), SkinId, MythicId, RoadPosition, Position.ToVector3(),

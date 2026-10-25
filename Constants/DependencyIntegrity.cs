@@ -6,7 +6,7 @@
         public static string Harmony = "6aeaa7f19d786867edbed164726685a8";
         public static string I18N = "4c561cac5eaafe1ed13a897a6e786752";
         public static string I18NWest = "f2dbe44f279dda3df477c494be903fe4";
-        public static string LiteDB = "4092ceeb0be21f4a8bd87daa2188bf09";
+        public static string LiteDB = "f1ccfeab0246f66416c2785e00e7cc58";
         public static string LiteDBAsync = "1203a2b4155bce755c56846680237d55";
         public static string MySqlData = "aebbdae6d6a8de5cd469f3f6300c20de";
         public static string NewtonsoftJson = "0ed248f9cf0b97fb2f7a307f498d9169";
